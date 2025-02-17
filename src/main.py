@@ -45,7 +45,7 @@ settings = Settings()
 client = OpenAI(api_key=settings.OPENAI_API_KEY_PERSONAL)
 app = FastAPI()
 
-df_products = pd.read_json("../data/sample_data_with_embeddings.jsonl", lines=True)
+df_products = pd.read_json("./data/sample_data_with_embeddings.jsonl", lines=True)
 
 
 class ProductDatabase:
@@ -83,12 +83,19 @@ def get_embeddings(input):
     return [data.embedding for data in response.data]
 
 
-def find_similar_products(query_embeddings: list[list[float]]) -> list[Product]:
+def find_similar_products(
+    query_embeddings: list[list[float]], top_k: int = 5
+) -> list[Product]:
     # Calculate cosine similarity between query embeddings and product embeddings
     similarities = np.dot(query_embeddings, df_products["embedding"].T)
 
     # Get the top 5 most similar products for each query
-    top_indices = np.argsort(similarities, axis=1)[:, -5:]
+    top_indices = np.argsort(similarities, axis=1)[:, -1 * top_k :]
+
+    # Get the products for the top indices
+    products = df_products.iloc[top_indices]
+
+    return products
 
 
 @app.get("/")
@@ -102,4 +109,6 @@ async def recommendations(request: RecommendationRequest) -> RecommendationRespo
 
     embeddings = get_embeddings(queries)
 
-    return RecommendationResponse(response=request.query)
+    products = find_similar_products(embeddings)
+
+    return RecommendationResponse(response=request.query, products=products)

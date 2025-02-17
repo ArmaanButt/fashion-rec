@@ -1,8 +1,10 @@
+import pandas as pd
+import numpy as np
+
 from fastapi import FastAPI
 
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
-
 
 from openai import OpenAI
 
@@ -43,6 +45,8 @@ settings = Settings()
 client = OpenAI(api_key=settings.OPENAI_API_KEY_PERSONAL)
 app = FastAPI()
 
+df_products = pd.read_json("../data/sample_data_with_embeddings.jsonl", lines=True)
+
 
 class ProductDatabase:
     def __init__(self):
@@ -77,6 +81,14 @@ def get_embeddings(input):
     print(input)
     response = client.embeddings.create(input=input, model=settings.EMBEDDING_MODEL)
     return [data.embedding for data in response.data]
+
+
+def find_similar_products(query_embeddings: list[list[float]]) -> list[Product]:
+    # Calculate cosine similarity between query embeddings and product embeddings
+    similarities = np.dot(query_embeddings, df_products["embedding"].T)
+
+    # Get the top 5 most similar products for each query
+    top_indices = np.argsort(similarities, axis=1)[:, -5:]
 
 
 @app.get("/")

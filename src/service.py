@@ -1,8 +1,10 @@
 from openai import OpenAI
 
-from models import QueryList, ProductValidationResponse
+from models import Product, QueryList, ProductValidationResponse
 from utils import get_and_encode_image
 from config import settings
+
+from pydantic import ValidationError
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY_PERSONAL)
 
@@ -31,6 +33,7 @@ def expand_query(query: str) -> QueryList:
             },
             {"role": "user", "content": query},
         ],
+        temperature=0,
         response_format=QueryList,
     )
     return response.choices[0].message.parsed
@@ -75,6 +78,7 @@ def validate_product_with_query(query, product_title, product_image_base64):
                 ],
             }
         ],
+        temperature=0,
         response_format=ProductValidationResponse,
     )
 
@@ -113,8 +117,6 @@ def generate_recommendation_response(validated_products, original_query):
             Do not list the number of products that you are showing. Mention that you have found a few options that you think will work.
             encourage the user to look at the products and see if they like any of them and say there are more options if they want to see more.
 
-            Include all products provided in the results.
-
             Here is a search query: {original_query}
             
             Here are the matching products:
@@ -128,7 +130,7 @@ def generate_recommendation_response(validated_products, original_query):
     response = client.chat.completions.create(
         model=settings.LLM_MODEL,
         messages=messages,
-        temperature=0.5,
+        temperature=0,
     )
 
     return response.choices[0].message.content
@@ -140,3 +142,22 @@ def get_embeddings(input):
     print(input)
     response = client.embeddings.create(input=input, model=settings.EMBEDDING_MODEL)
     return [data.embedding for data in response.data]
+
+
+def map_dataframe_to_products(df) -> list[Product]:
+    products = []
+    # Valid fields based on the Product model
+    valid_fields = set(Product.model_fields.keys())
+
+    for index, row in df.iterrows():
+        row_data = row.to_dict()
+        # Only keep the keys that match the Product model fields
+        filtered_data = {
+            key: value for key, value in row_data.items() if key in valid_fields
+        }
+        try:
+            product = Product(**filtered_data)
+            products.append(product)
+        except ValidationError as e:
+            print(f"Validation error on row {index}: {e}")
+    return products

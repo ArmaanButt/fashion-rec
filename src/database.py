@@ -10,7 +10,7 @@ class ProductDatabase:
         )
 
     def find_similar_products(
-        self, query_embeddings: list[list[float]], top_k: int = 5
+        self, query_embeddings: list[list[float]], top_k: int = 3
     ) -> list[Product]:
         product_embeddings = np.array(
             list(self.df_products["embedding"].apply(lambda x: list(x)))

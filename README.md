@@ -49,3 +49,7 @@ You will expose this functionality through a chat-based API endpoint, with an op
 ### Installation Steps
 
 1. Clone the repository
+
+```
+fastapi dev src/main.py
+```

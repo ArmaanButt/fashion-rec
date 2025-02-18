@@ -38,3 +38,14 @@ You will expose this functionality through a chat-based API endpoint, with an op
 - "Show me some vintage-inspired outfits.":
 - "I need an outfit that makes me feel confident and unique."
 - "Help me find something stylish to wear tonight."
+
+## Project Setup
+
+### Prerequisites
+
+- Python 3.12.7
+- pip (Python package installer)
+
+### Installation Steps
+
+1. Clone the repository

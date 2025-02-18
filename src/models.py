@@ -10,6 +10,11 @@ class Product(BaseModel):
     thumbnail: str
 
 
+class ProductValidationResponse(BaseModel):
+    answer: bool
+    reason: str
+
+
 class QueryList(BaseModel):
     queries: list[str]
 

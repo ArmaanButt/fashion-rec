@@ -60,18 +60,19 @@ async def recommendations(request: RecommendationRequest) -> RecommendationRespo
     print("Validate with images")
     print(time.time() - start_time)
 
-    recommendation_response = generate_recommendation_response(
-        validated_products, user_query
-    )
+    # recommendation_response = generate_recommendation_response(
+    #     validated_products, user_query
+    # )
 
-    print("Generating answer")
-    print(time.time() - start_time)
+    # print("Generating answer")
+    # print(time.time() - start_time)
 
     validated_products_list = map_dataframe_to_products(validated_products)
 
     print("Generating answer")
     print(time.time() - start_time)
 
+    # TODO
     return RecommendationResponse(
-        response=recommendation_response, products=validated_products_list
+        response="Placeholder", products=validated_products_list
     )

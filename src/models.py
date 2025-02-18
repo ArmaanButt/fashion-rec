@@ -12,7 +12,7 @@ class Product(BaseModel):
 
 class ProductValidationResponse(BaseModel):
     answer: bool
-    reason: str
+    # reason: str
 
 
 class QueryList(BaseModel):

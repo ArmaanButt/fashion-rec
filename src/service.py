@@ -54,9 +54,8 @@ def validate_product_with_query(query, product_title, product_image_base64):
                             If the user was specific about what they were looking for, make sure the item matches that description.
                             Example: If the user is looking for a "mens wedding outfit", make sure the item is for an adult male and not a child.
                             
-                            Provide your analysis in JSON format with two fields:
+                            Provide your analysis in JSON format with field:
                             - "answer": Must be "True" or "False" indicating if the item matches the query
-                            - "reason": A concise explanation of your decision if the item matches the query. Leave blank if the item does not match the query.
                             
                             Do not describe the item itself. Focus only on its relevance to the query.
                             

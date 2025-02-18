@@ -1,7 +1,9 @@
 annotated-types==0.7.0
 anyio==4.8.0
 certifi==2025.1.31
+charset-normalizer==3.4.1
 click==8.1.8
+dill==0.3.9
 distro==1.9.0
 dnspython==2.7.0
 email_validator==2.2.0
@@ -19,7 +21,9 @@ MarkupSafe==3.0.2
 mdurl==0.1.2
 numpy==2.2.3
 openai==1.63.0
+pandarallel==1.6.5
 pandas==2.2.3
+psutil==7.0.0
 pydantic==2.10.6
 pydantic-settings==2.7.1
 pydantic_core==2.27.2
@@ -29,6 +33,7 @@ python-dotenv==1.0.1
 python-multipart==0.0.20
 pytz==2025.1
 PyYAML==6.0.2
+requests==2.32.3
 rich==13.9.4
 rich-toolkit==0.13.2
 shellingham==1.5.4
@@ -39,6 +44,7 @@ tqdm==4.67.1
 typer==0.15.1
 typing_extensions==4.12.2
 tzdata==2025.1
+urllib3==2.3.0
 uvicorn==0.34.0
 uvloop==0.21.0
 watchfiles==1.0.4

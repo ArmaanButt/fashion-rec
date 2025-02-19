@@ -128,6 +128,8 @@ async def recommendations(request: RecommendationRequest) -> RecommendationRespo
 
     product_results.sort_values("average_rating", ascending=False, inplace=True)
 
+    print(product_results.to_string())
+
     # Filter products to only those that match the query according to the model
     # Get the current event loop
     loop = asyncio.get_running_loop()
@@ -143,7 +145,7 @@ async def recommendations(request: RecommendationRequest) -> RecommendationRespo
     # Wait for all tasks to complete concurrently.
     # List of booleans will be used to filter the dataframe.
     results = await asyncio.gather(*tasks)
-    
+    print(results)
     validated_products = product_results[results]
 
     print("Validate with images")

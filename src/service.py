@@ -44,7 +44,7 @@ def expand_query(query: str) -> QueryList:
 
 
 @retry(wait=wait_random_exponential(min=1, max=30), stop=stop_after_attempt(5))
-def validate_product_with_query(query, product_title, product_image_base64):
+def validate_product_with_query(query, product_row, product_image_base64):
     messages = [
         {
             "role": "user",
@@ -58,6 +58,8 @@ def validate_product_with_query(query, product_title, product_image_base64):
                             Example: If the user is looking for a "mens wedding outfit", make sure the item is for an adult male and not a child.
 
                             If the user is providing an event or location, account for the formality that would be needed for the event and location.
+
+                            If the user provided a price or a range in their query, take it into account as to whether is should be shown.
                             
                             Provide your analysis in JSON format with field:
                             - "answer": Must be "True" or "False" indicating if the item matches the query
@@ -65,7 +67,9 @@ def validate_product_with_query(query, product_title, product_image_base64):
                             Do not describe the item itself. Focus only on its relevance to the query.
                             
                             Query: {query}
-                            Product Title: {product_title}
+                            Product Title: {product_row.title}
+                            Price: {product_row.price}
+                            Average Rating: {product_row.average_rating}
                             """,
                 },
                 {
@@ -95,7 +99,7 @@ def validate_single_product(product_row, query):
     """
     product_image_base64 = get_and_encode_image(product_row.thumbnail)
     return validate_product_with_query(
-        query, product_row.title, product_image_base64
+        query, product_row, product_image_base64
     )
 
 

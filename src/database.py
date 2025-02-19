@@ -6,7 +6,7 @@ from models import Product
 class ProductDatabase:
     def __init__(self):
         self.df_products = pd.read_json(
-            "./data/sample_data_with_embeddings.jsonl", lines=True
+            "./data/processed_data_with_embeddings.jsonl", lines=True
         )
 
     def find_similar_products(

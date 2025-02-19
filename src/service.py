@@ -1,12 +1,14 @@
 from openai import OpenAI
+from pydantic import ValidationError
+from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from models import Product, QueryList, ProductValidationResponse
 from utils import get_and_encode_image
 from config import settings
 
-from pydantic import ValidationError
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY_PERSONAL)
+
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
 def expand_query(query: str) -> QueryList:
@@ -16,7 +18,7 @@ def expand_query(query: str) -> QueryList:
             {
                 "role": "system",
                 "content": """
-                          You are a helpful assistant that expands queries. 
+                          You are a helpful assistant that expands user queries to help find products. 
                           Based on the user query, you will expand the query to include more relevant products.
                           If you are asked to help with an outfit, you will create queries
                           that expand the number of products.
@@ -108,7 +110,7 @@ def generate_recommendation_response(validated_products, original_query):
     """
     messages = [
         {
-            "role": "system",
+            "role": "user",
             "content": f"""You are a helpful shopping assistant. Summarize the search results in a natural, 
             conversational way. Include key details like number of results, price ranges if available, 
             and notable brands or features. Avoid any negative language when describing the products.
@@ -116,7 +118,11 @@ def generate_recommendation_response(validated_products, original_query):
             Do not list the number of products that you are showing. Mention that you have found a few options that you think will work.
             encourage the user to look at the products and see if they like any of them and say there are more options if they want to see more.
 
-            Here is a search query: {original_query}
+            Compare and contrast the results. 
+            
+            Example: This shirt is a great option but this other shirt has a higher rating.
+
+            Search Query: {original_query}
             
             Here are the matching products:
             {validated_products.to_string()}
@@ -136,7 +142,7 @@ def generate_recommendation_response(validated_products, original_query):
 
 
 # Simple function to take in a list of text objects and return them as a list of embeddings
-# @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(10))
+@retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(10))
 def get_embeddings(input):
     print(input)
     response = client.embeddings.create(input=input, model=settings.EMBEDDING_MODEL)

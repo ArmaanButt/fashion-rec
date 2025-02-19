@@ -9,19 +9,19 @@ class Product(BaseModel):
     store: str
     thumbnail: str
 
-
 class ProductValidationResponse(BaseModel):
     answer: bool
     # reason: str
 
+class ValidQuery(BaseModel):
+    is_valid: bool
 
 class QueryList(BaseModel):
     queries: list[str]
 
-
 class RecommendationRequest(BaseModel):
     query: str
-
+    llmResponse: bool | None = None
 
 class RecommendationResponse(BaseModel):
     response: str

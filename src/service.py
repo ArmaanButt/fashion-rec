@@ -2,15 +2,15 @@ from openai import OpenAI
 from pydantic import ValidationError
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
-from models import Product, QueryList, ProductValidationResponse
+from models import Product, QueryList, ProductValidationResponse, ValidQuery
 from utils import get_and_encode_image
 from config import settings
-
 
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
+@retry(wait=wait_random_exponential(min=1, max=30), stop=stop_after_attempt(5))
 def expand_query(query: str) -> QueryList:
     response = client.beta.chat.completions.parse(
         model=settings.LLM_MODEL,
@@ -27,9 +27,11 @@ def expand_query(query: str) -> QueryList:
                           
                           Query: "I need a suit for prom."
 
-                          Expanded Queries: ['Suit formal', 'Dress pants', 'Tied formal', 'Dress shoes black']
+                          Expanded Queries: ['Suit formal', 'Dress pants', 'Dress shoes black']
 
                           Your output will be used to do a similarity search on a product database.
+                          If the input is not appropriate or has nothing to do with searching for products,
+                          or has a part of the query that has nothing to do with products return an empty list.
                           Return a list of expanded queries with only 5 expanded queries.
                           """,
             },
@@ -41,18 +43,18 @@ def expand_query(query: str) -> QueryList:
     return response.choices[0].message.parsed
 
 
-def validate_product_with_query(query, product_title, product_image_base64):
-    response = client.beta.chat.completions.parse(
-        model=settings.LLM_MODEL,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": f""" You are a fashion expert analyzing a clothing item.
+@retry(wait=wait_random_exponential(min=1, max=30), stop=stop_after_attempt(5))
+def validate_product_with_query(query, product_title):
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": f""" You are a fashion expert analyzing a clothing item.
                             You will be shown an image of a clothing item and given a text query.
                             Evaluate if this item matches the description in the query.
+
                             If the user was specific about what they were looking for, make sure the item matches that description.
                             Example: If the user is looking for a "mens wedding outfit", make sure the item is for an adult male and not a child.
                             
@@ -61,29 +63,22 @@ def validate_product_with_query(query, product_title, product_image_base64):
                             
                             Do not describe the item itself. Focus only on its relevance to the query.
                             
-                            <query>
-                            {query}
-                            </query>
-
-                            <product_title>
-                            {product_title}
-                            </product_title>
+                            Query: {query}
+                            Product Title: {product_title}
                             """,
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{product_image_base64}",
-                        },
-                    },
-                ],
-            }
-        ],
+                },
+            ],
+        }
+    ]
+
+    response = client.beta.chat.completions.parse(
+        model=settings.LLM_MODEL,
+        messages=messages,
         temperature=0,
         response_format=ProductValidationResponse,
     )
 
-    return response.choices[0].message.parsed
+    return response.choices[0].message.parsed.answer
 
 
 def validate_single_product(product_row, query):
@@ -91,12 +86,13 @@ def validate_single_product(product_row, query):
     Validates a single product against the original query using its thumbnail image.
     Returns the validation response.
     """
-    product_image_base64 = get_and_encode_image(product_row["thumbnail"])
+
     return validate_product_with_query(
-        query, product_row["title"], product_image_base64
+        query, product_row["title"]
     )
 
 
+@retry(wait=wait_random_exponential(min=1, max=30), stop=stop_after_attempt(5))
 def generate_recommendation_response(validated_products, original_query):
     """
     Generates a natural language response summarizing the validated product results.
@@ -133,7 +129,7 @@ def generate_recommendation_response(validated_products, original_query):
     ]
 
     response = client.chat.completions.create(
-        model=settings.LLM_MODEL,
+        model="gpt-3.5-turbo",
         messages=messages,
         temperature=0,
     )
@@ -142,7 +138,7 @@ def generate_recommendation_response(validated_products, original_query):
 
 
 # Simple function to take in a list of text objects and return them as a list of embeddings
-@retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(10))
+@retry(wait=wait_random_exponential(min=1, max=30), stop=stop_after_attempt(5))
 def get_embeddings(input):
     print(input)
     response = client.embeddings.create(input=input, model=settings.EMBEDDING_MODEL)

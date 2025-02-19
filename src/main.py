@@ -1,9 +1,10 @@
 import time
+import asyncio
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from pandarallel import pandarallel
+from concurrent.futures import ThreadPoolExecutor
 
 from service import (
     expand_query,
@@ -15,7 +16,6 @@ from service import (
 from models import RecommendationRequest, RecommendationResponse
 from database import ProductDatabase
 
-pandarallel.initialize(nb_workers=4, verbose=0)
 
 db = ProductDatabase()
 
@@ -44,7 +44,7 @@ async def root():
           <input type="text" id="query" placeholder="Enter your search...">
           <br>
           <label>
-            <input type="checkbox" id="llmResponse"> Include LLM explanation
+            <input type="checkbox" id="llmResponse"> Include natural language response
           </label>
           <br>
           <button onclick="submitQuery()">Search</button>
@@ -126,13 +126,25 @@ async def recommendations(request: RecommendationRequest) -> RecommendationRespo
     print("Found similar products")
     print(time.time() - start_time)
 
-    product_results.sort_values('average_rating', ascending=False, inplace=True)
-    # Filter products to only those that match the query according to the vision model
-    validated_products = product_results[
-        product_results.parallel_apply(
-            validate_single_product, axis=1, query=user_query
-        )
-    ]
+    product_results.sort_values("average_rating", ascending=False, inplace=True)
+
+    # Filter products to only those that match the query according to the model
+    # Get the current event loop
+    loop = asyncio.get_running_loop()
+
+    # Heavy IO task. Most threads will be idle so setting high count. 
+    with ThreadPoolExecutor(max_workers=15) as executor:
+      # Create tasks for each row using run_in_executor
+      tasks = [
+          loop.run_in_executor(executor, validate_single_product, row, user_query)
+          for row in product_results.itertuples(index=False)
+      ]
+    
+    # Wait for all tasks to complete concurrently.
+    # List of booleans will be used to filter the dataframe.
+    results = await asyncio.gather(*tasks)
+    
+    validated_products = product_results[results]
 
     print("Validate with images")
     print(time.time() - start_time)

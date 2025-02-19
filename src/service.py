@@ -44,7 +44,7 @@ def expand_query(query: str) -> QueryList:
 
 
 @retry(wait=wait_random_exponential(min=1, max=30), stop=stop_after_attempt(5))
-def validate_product_with_query(query, product_title):
+def validate_product_with_query(query, product_title, product_image_base64):
     messages = [
         {
             "role": "user",
@@ -55,8 +55,9 @@ def validate_product_with_query(query, product_title):
                             You will be shown an image of a clothing item and given a text query.
                             Evaluate if this item matches the description in the query.
 
-                            If the user was specific about what they were looking for, make sure the item matches that description.
                             Example: If the user is looking for a "mens wedding outfit", make sure the item is for an adult male and not a child.
+
+                            If the user is providing an event or location, account for the formality that would be needed for the event and location.
                             
                             Provide your analysis in JSON format with field:
                             - "answer": Must be "True" or "False" indicating if the item matches the query
@@ -66,6 +67,12 @@ def validate_product_with_query(query, product_title):
                             Query: {query}
                             Product Title: {product_title}
                             """,
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/jpeg;base64,{product_image_base64}",
+                    },
                 },
             ],
         }
@@ -86,9 +93,9 @@ def validate_single_product(product_row, query):
     Validates a single product against the original query using its thumbnail image.
     Returns the validation response.
     """
-
+    product_image_base64 = get_and_encode_image(product_row.thumbnail)
     return validate_product_with_query(
-        query, product_row["title"]
+        query, product_row.title, product_image_base64
     )
 
 
@@ -123,7 +130,8 @@ def generate_recommendation_response(validated_products, original_query):
             Here are the matching products:
             {validated_products.to_string()}
             
-            Please provide a natural language summary of these results.
+            Please provide a natural language summary of these results. If there are no products,
+            Suggest ways the user can improve their search query.
             """,
         }
     ]

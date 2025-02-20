@@ -17,7 +17,8 @@ class ProductDatabase:
         self, query_embeddings: list[list[float]], top_k: int = 3
     ) -> list[Product]:
 
-        # Calculate cosine similarity between query embeddings and product embeddings
+        # Calculate cosine similarity between query embeddings and product embeddings.
+        # Since vectors are normalized, the dot product is equivalent to cosine similarity.
         similarities = np.dot(query_embeddings, self.embeddings.T)
 
         # Get the top 3 most similar products for each query

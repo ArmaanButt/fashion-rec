@@ -20,16 +20,6 @@ class Product(BaseModel):
     store: str
     thumbnail: str
 
-class ProductValidationResponse(BaseModel):
-    """
-    Response from product validation against a query.
-    
-    Attributes:
-        answer (bool): True if product matches query criteria, False otherwise
-    """
-    answer: bool
-    # reason: str  # Commented out but could be used for validation explanation
-
 
 class RecommendationRequest(BaseModel):
     """

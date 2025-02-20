@@ -16,15 +16,11 @@ from service import (
 from models import RecommendationRequest, RecommendationResponse
 from database import ProductDatabase
 
-# Loads processed data into memory
+# Loads processed data with embeddings into memory
 db = ProductDatabase()
 
 # Create FastAPI application instance
-app = FastAPI(
-    title="Fashion Product Recommendation API",
-    description="An intelligent fashion recommendation system using natural language processing",
-    version="1.0.0"
-)
+app = FastAPI()
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -122,114 +118,107 @@ async def recommendations(request: RecommendationRequest) -> RecommendationRespo
         RecommendationResponse: Product recommendations and optional natural language response
 
     """
+
+    start_time = time.time()
+    user_query = request.query
+    llm_response_requested = request.llmResponse
+    recommendation_response = ""
+
+    # Expand the user's query into related search terms
     try:
-        start_time = time.time()
-        user_query = request.query
-        llm_response_requested = request.llmResponse
-        recommendation_response = ""
+        queries = expand_query(user_query)
+    except OpenAIError as e:
+        raise HTTPException(
+            status_code=503,
+            detail="Error expanding query. Please try again later."
+        ) from e
 
-        # Expand the user's query into related search terms
-        try:
-            queries = expand_query(user_query)
-        except OpenAIError as e:
-            raise HTTPException(
-                status_code=503,
-                detail="Error expanding query. Please try again later."
-            ) from e
-
-        # Validate the expanded queries
-        if len(queries) == 0 or (len(queries) == 1 and queries[0] == ""):
-            return RecommendationResponse(
-                response="Sorry I can't help with that. Please rephrase your query to focus on fashion items.",
-                products=[]
-            )
-
-        print(f"Query expansion completed in {time.time() - start_time:.2f}s")
-
-        # Generate embeddings for semantic search
-        try:
-            embeddings = get_embeddings(queries)
-        except OpenAIError as e:
-            raise HTTPException(
-                status_code=503,
-                detail="Error generating embeddings. Please try again later."
-            ) from e
-
-        print(f"Embeddings generated in {time.time() - start_time:.2f}s")
-
-        # Find similar products using vector search
-        try:
-            product_results = db.find_similar_products(embeddings)
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail="Error searching product database."
-            ) from e
-
-        print(f"Similar products found in {time.time() - start_time:.2f}s")
-
-        # Sort products by rating for initial ranking
-        product_results.sort_values("average_rating", ascending=False, inplace=True)
-
-        # Validate products against the original query using concurrent processing
-        loop = asyncio.get_running_loop()
-        try:
-            with ThreadPoolExecutor(max_workers=15) as executor:
-                tasks = [
-                    loop.run_in_executor(
-                        executor,
-                        validate_product_with_query,
-                        user_query,
-                        row
-                    )
-                    for row in product_results.itertuples(index=False)
-                ]
-                results = await asyncio.gather(*tasks)
-        except Exception as e:
-            raise HTTPException(
-                status_code=503,
-                detail="Error validating products. Please try again later."
-            ) from e
-
-        # Filter products based on validation results
-        validated_products = product_results[results]
-        print(f"Products validated in {time.time() - start_time:.2f}s")
-
-        # Generate natural language response if requested
-        if llm_response_requested:
-            try:
-                recommendation_response = generate_recommendation_response(
-                    validated_products,
-                    user_query
-                )
-            except OpenAIError as e:
-                # Don't fail the request if response generation fails
-                recommendation_response = (
-                    "I've found some products that match your request. "
-                    "Please take a look and see if any meet your needs."
-                )
-                print(f"Error generating response: {e}")
-
-            print(f"Response generated in {time.time() - start_time:.2f}s")
-
-        # Convert DataFrame to Product models
-        try:
-            validated_products_list = map_dataframe_to_products(validated_products)
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail="Error processing product data."
-            ) from e
-
+    # Validate the expanded queries
+    if len(queries) == 0 or (len(queries) == 1 and queries[0] == ""):
         return RecommendationResponse(
-            response=recommendation_response,
-            products=validated_products_list
+            response="Sorry I can't help with that. Please rephrase your query to focus on fashion items.",
+            products=[]
         )
 
+    print(f"Query expansion completed in {time.time() - start_time:.2f}s")
+
+    # Generate embeddings for semantic search
+    try:
+        embeddings = get_embeddings(queries)
+    except OpenAIError as e:
+        raise HTTPException(
+            status_code=503,
+            detail="Error generating embeddings. Please try again later."
+        ) from e
+
+    print(f"Embeddings generated in {time.time() - start_time:.2f}s")
+
+    # Find similar products using vector search
+    try:
+        product_results = db.find_similar_products(embeddings)
     except Exception as e:
-        # Log the unexpected error
-        print(f"Unexpected error: {e}")
         raise HTTPException(
             status_code=500,
-            detail="An unexpected error occurred. Please try again later."
+            detail="Error searching product database."
         ) from e
+
+    print(f"Similar products found in {time.time() - start_time:.2f}s")
+
+    # Sort products by rating for initial ranking
+    product_results.sort_values("average_rating", ascending=False, inplace=True)
+
+    # Validate products against the original query using concurrent processing
+    loop = asyncio.get_running_loop()
+    try:
+        with ThreadPoolExecutor(max_workers=15) as executor:
+            tasks = [
+                loop.run_in_executor(
+                    executor,
+                    validate_product_with_query,
+                    user_query,
+                    row
+                )
+                for row in product_results.itertuples(index=False)
+            ]
+            results = await asyncio.gather(*tasks)
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail="Error validating products. Please try again later."
+        ) from e
+
+    # Filter products based on validation results
+    validated_products = product_results[results]
+    print(f"Products validated in {time.time() - start_time:.2f}s")
+
+    # Generate natural language response if requested
+    if llm_response_requested:
+        try:
+            recommendation_response = generate_recommendation_response(
+                validated_products,
+                user_query
+            )
+        except OpenAIError as e:
+            # Don't fail the request if response generation fails
+            recommendation_response = (
+                "I've found some products that match your request. "
+                "Please take a look and see if any meet your needs."
+            )
+            print(f"Error generating response: {e}")
+
+        print(f"Response generated in {time.time() - start_time:.2f}s")
+
+    # Convert DataFrame to Product models
+    try:
+        validated_products_list = map_dataframe_to_products(validated_products)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Error processing product data."
+        ) from e
+
+    return RecommendationResponse(
+        response=recommendation_response,
+        products=validated_products_list
+    )
+

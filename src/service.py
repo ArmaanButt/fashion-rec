@@ -16,7 +16,7 @@ client = OpenAI(api_key=settings.OPENAI_API_KEY)
 def expand_query(query: str):
     """
     Expands a user's fashion query into multiple related search queries using gpt-3.5-turbo.
-    
+
     Takes a single query string and returns up to 5 related search queries to help find
     relevant fashion products. For example, a query about a prom suit might expand to
     include dress pants and shoes.
@@ -50,7 +50,8 @@ def expand_query(query: str):
             Response: [""]
 
             Do not include JSON tags. Use double quotes for the list.
-
+            Remember If the input is not appropriate or has nothing to do with searching for fashion products
+            return an empty list.
             User Query:
             """
     response = client.chat.completions.create(
@@ -58,17 +59,17 @@ def expand_query(query: str):
         messages=[
             {
                 "role": "system",
-                "content":prompt,
+                "content": prompt,
             },
             {"role": "user", "content": query},
         ],
-        temperature=0
+        temperature=0,
     )
     queries_str = response.choices[0].message.content.strip()
 
     print(queries_str)
 
-    try: 
+    try:
         queries = json.loads(queries_str)
         print(queries)
         return queries
@@ -81,7 +82,7 @@ def expand_query(query: str):
 def validate_product_with_query(query, product_row):
     """
     Validates if a product matches the user's search query using gpt-3.5-turbo.
-    
+
     Analyzes product details against the query to determine relevance, considering factors
     like gender, formality, price range, and appropriateness for specific events.
 
@@ -113,12 +114,7 @@ def validate_product_with_query(query, product_row):
         Average Rating: {product_row.average_rating}
     """
 
-    messages = [
-        {
-            "role": "user",
-            "content": prompt.strip()
-        }
-    ]
+    messages = [{"role": "user", "content": prompt.strip()}]
 
     response = client.chat.completions.create(
         model=settings.LLM_MODEL,
@@ -129,18 +125,19 @@ def validate_product_with_query(query, product_row):
     answer_text = response.choices[0].message.content.strip()
 
     try:
-        match = re.search(r'^(True|False)$', answer_text, re.IGNORECASE)
+        match = re.search(r"^(True|False)$", answer_text, re.IGNORECASE)
         if match:
             answer_str = match.group(0).lower()
             return True if answer_str == "true" else False
     except Exception:
         return False
 
+
 @retry(wait=wait_random_exponential(min=1, max=30), stop=stop_after_attempt(5))
 def generate_recommendation_response(validated_products, original_query):
     """
     Generates a natural language response summarizing the validated product results.
-    
+
     Creates a conversational summary of search results, highlighting key product features,
     comparing options, and providing helpful suggestions.
 
@@ -185,13 +182,12 @@ def generate_recommendation_response(validated_products, original_query):
     return response.choices[0].message.content
 
 
-
 @retry(wait=wait_random_exponential(min=1, max=30), stop=stop_after_attempt(5))
 def get_embeddings(input):
     """
     Generates embeddings for a list of text inputs using text-embedding-3-small.
-    
-    Takes text inputs and converts them into vector embeddings that are used for 
+
+    Takes text inputs and converts them into vector embeddings that are used for
     similarity search.
 
     Args:
@@ -208,7 +204,7 @@ def get_embeddings(input):
 def map_dataframe_to_products(df) -> list[Product]:
     """
     Converts a pandas DataFrame into a list of Product model instances.
-    
+
     Maps DataFrame rows to Product objects, validating the data against the
     Product model schema.
 

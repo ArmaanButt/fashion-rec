@@ -1,55 +1,119 @@
-# FDE Takehome Assignment
+# Fashion Product Recommendation API
+Submission By: Armaan Butt
 
-Semantic Fashion Recommendation
+## Technical Stack
 
-## Backlog
+- Python 3.12.8
+- FastAPI for API endpoints
+- OpenAI GPT-3.5-turbo for natural language processing
+- text-embedding-3-small for semantic search
+- Pydantic for data validation
+- Pandas for data processing
 
-- [ ] Diagram for system
-- [ ] Frontend chat
-- [ ] Generate API Key
-- [ ] Embed product titles
-- [ ] Extract additional metadata
+## Quick Start
 
-You will prototype a new semantic recommendation feature for an e-commerce website's fashion product line using the OpenAI API. The service will provide an interactive chat experience where users can have natural conversations about their fashion needs, rather than just receiving search results.
-:
-
-- Natural language chat interface using OpenAI's GPT models
-- Contextual product recommendations based on user's needs and preferences
-- Ability to ask follow-up questions and refine recommendations
-- Integration with product catalog for accurate, real-time suggestions
-
-Example conversation:
-User: "I need an outfit to go to the beach this summer"
-Assistant: "I'll help you find the perfect beach outfit! Are you looking for something casual or dressy?"
-User: "Casual and comfortable"
-Assistant: _Recommends relevant beach-appropriate items with explanations_
-
-You will expose this functionality through a chat-based API endpoint, with an optional front-end demo showing the conversational shopping experience. The system should maintain context throughout the conversation to provide increasingly personalized recommendations.
-
-## Example User Queries
-
-- "I need something light and breezy for a hot summer day."
-- "What should I wear to stay warm this winter?"
-- "I’m looking for a dress that’s perfect for a wedding."
-- "I need a smart outfit for an important business meeting.":
-- "I need comfortable activewear for my morning jog."
-- "What can I wear to a beach party?":
-- "I'm after a trendy, casual look for hanging out with friends."
-- "Show me some vintage-inspired outfits.":
-- "I need an outfit that makes me feel confident and unique."
-- "Help me find something stylish to wear tonight."
-
-## Project Setup
-
-### Prerequisites
-
-- Python 3.12.7
-- pip (Python package installer)
-
-### Installation Steps
-
-1. Clone the repository
-
+1. Unzip and cd into the repository:
+```bash
+cd semantic-fashion-rec
 ```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Set up environment variables:
+```bash
+cp .env.example .env
+# Add your OpenAI API key to .env
+```
+
+4. Run the service:
+```bash
 fastapi dev src/main.py
 ```
+5. Open a browser and navigate to:
+```bash
+http://localhost:8000/
+```
+
+## API Usage
+
+### Example Request
+```bash
+curl -X POST "http://localhost:8000/recommendations" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "I need an outfit for a winter ball", "llmResponse": true}'
+```
+
+### Example Response
+```json
+{
+    "recommendations": "I've found some elegant options for your winter ball...",
+    "products": [
+        {
+            "title": "Evening Gown with Sequins",
+            "price": 299.99,
+            "rating": 4.8
+        }
+        // Additional products...
+    ]
+}
+```
+
+## Example Use Cases
+
+The system handles a wide range of fashion queries, including:
+
+### Formal Events
+- "I need an outfit for a winter ball"
+- "I'm looking for a dress that's perfect for a wedding"
+- "I need a smart outfit for an important business meeting"
+
+### Casual Wear
+- "I need something light and breezy for a hot summer day"
+- "What can I wear to a beach party?"
+- "I'm after a trendy, casual look for hanging out with friends"
+
+### Themed Outfits
+- "I want to wear something that is like a halloween costume but professional to a work party"
+- "Show me some vintage-inspired outfits"
+- "Date night outfit at the aquarium"
+
+### Seasonal Fashion
+- "What should I wear to stay warm this winter?"
+- "I need comfortable activewear for my morning jog"
+
+## Design Decisions
+
+### Query Processing
+- Uses GPT-3.5-turbo for query understanding and expansion
+- Maintains conversation context for better recommendations
+- Implements retry logic for API reliability
+
+### Search Strategy
+- Semantic search using embeddings for better matching
+- Product validation to ensure relevance
+- Natural language response generation for user-friendly output
+
+### Performance Considerations
+- Stateless design for scalability
+- Efficient embedding storage and retrieval
+- Optimized API calls to minimize latency
+
+## Development
+
+### Local Development
+```bash
+fastapi dev src/main.py
+```
+
+## Future Improvements
+
+- [ ] Frontend chat interface
+- [ ] API key authentication
+- [ ] Expanded product metadata
+- [ ] Caching layer for frequent queries
+- [ ] User preference learning
+- [ ] Performance optimization
+- [ ] Additional product attributes

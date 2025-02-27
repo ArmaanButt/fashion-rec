@@ -1,5 +1,8 @@
 # Fashion Product Recommendation
-Submission by: Armaan Butt
+
+A small project to learn FastAPI and OpenAI APIs for building a fashion product recommendation system. 
+The system leverages OpenAI's capabilities to provide personalized fashion recommendations based on user preferences and descriptions. 
+Built with FastAPI for the backend API service, this project serves as a learning exercise in integrating modern AI services with web APIs.
 
 ## Project Structure
 
